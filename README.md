@@ -1,4 +1,18 @@
-# 🚀 Quick Start Guide - PO Translation Tool
+# 🚀 PO Translation Tool
+
+![PO Translation Tool Interface](images/po-translator-interface.png)
+
+*Professional AI-powered translation tool for CMS and CRM localization workflows*
+
+## ✨ Features
+
+- 🤖 **AI-Powered Translation Engine** - Powered by DeepSeek V3 for high-quality translations
+- 🌍 **20+ Languages** - Support for major world languages
+- 🎯 **CMS/CRM Optimized** - Specialized for content management systems
+- ⚡ **Batch Processing** - Handle multiple files efficiently
+- 🔄 **Smart Retry Logic** - Automatic retry for failed translations
+- 📊 **Real-time Progress** - Track translation progress live
+- 💾 **Easy Download** - Get your translated files instantly
 
 ## Prerequisites
 - Docker and Docker Compose installed
