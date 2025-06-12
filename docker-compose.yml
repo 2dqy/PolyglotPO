@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  translation-tool:
+    build: .
+    container_name: po-translation-tool
+    ports:
+      - "8002:8002"
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - HOST=0.0.0.0
+      - PORT=8002
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - STORAGE_RETENTION_DAYS=1
+      - CLEANUP_INTERVAL=3600
+    volumes:
+      # Persist storage data
+      - ./data/storage:/app/src/app/storage
+      # Persist logs
+      - ./data/logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - translation-network
+
+networks:
+  translation-network:
+    driver: bridge
+
+volumes:
+  storage-data:
+  logs-data: 

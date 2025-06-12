@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Translation Jobs - {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8 px-4 sm:px-6 lg:px-8">
+    <!-- Header Section -->
+    <div class="text-center py-12 animate-fade-in-up">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">
+            Translation 
+            <span class="bg-gradient-to-r from-green-400 to-green-500 bg-clip-text text-transparent">
+                Jobs Dashboard
+            </span>
+        </h1>
+        <p class="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
+            Monitor, manage, and download your translation jobs
+        </p>
+        
+        <!-- Quick Actions -->
+        <div class="flex flex-wrap justify-center gap-4">
+            <a href="/" class="btn-primary px-6 py-3 rounded-xl font-semibold">
+                <svg class="h-5 w-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                New Translation
+            </a>
+            <button id="refreshAllBtn" class="btn-secondary px-6 py-3 rounded-xl font-semibold">
+                <svg class="h-5 w-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh All
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in-up">
+        <div class="glass-card rounded-2xl p-6 card-hover border border-gray-700/50">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-2">Total Jobs</p>
+                    <p class="text-3xl font-bold text-white mb-1" id="totalJobs">0</p>
+                    <p class="text-xs text-blue-400">all time</p>
+                </div>
+                <div class="h-12 w-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                    <svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass-card rounded-2xl p-6 card-hover border border-gray-700/50">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-2">Processing</p>
+                    <p class="text-3xl font-bold text-white mb-1" id="processingJobs">0</p>
+                    <p class="text-xs text-orange-400">active</p>
+                </div>
+                <div class="h-12 w-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                    <svg class="h-6 w-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass-card rounded-2xl p-6 card-hover border border-gray-700/50">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-2">Completed</p>
+                    <p class="text-3xl font-bold text-white mb-1" id="completedJobs">0</p>
+                    <p class="text-xs text-green-400">ready</p>
+                </div>
+                <div class="h-12 w-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                    <svg class="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="glass-card rounded-2xl p-6 card-hover border border-gray-700/50">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-2">Failed</p>
+                    <p class="text-3xl font-bold text-white mb-1" id="failedJobs">0</p>
+                    <p class="text-xs text-red-400">errors</p>
+                </div>
+                <div class="h-12 w-12 bg-red-500/20 rounded-xl flex items-center justify-center">
+                    <svg class="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="glass-card rounded-2xl p-6 animate-fade-in-up border border-gray-700/50">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div class="flex flex-wrap gap-4">
+                <select id="statusFilter" class="input-supabase rounded-xl px-4 py-2 text-white">
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="completed">Completed</option>
+                    <option value="failed">Failed</option>
+                </select>
+                
+                <select id="languageFilter" class="input-supabase rounded-xl px-4 py-2 text-white">
+                    <option value="">All Languages</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="zh-CN">Simplified Chinese</option>
+                    <option value="zh-HK">Traditional Chinese (HK)</option>
+                </select>
+                
+                <input type="text" id="searchFilter" placeholder="Search files..." 
+                       class="input-supabase rounded-xl px-4 py-2 text-white">
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-400">Auto-refresh:</span>
+                <button id="toggleAutoRefresh" class="p-2 rounded-xl bg-green-400/20 text-green-400 hover:bg-green-400/30 transition-all">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jobs List -->
+    <div class="glass-card rounded-3xl p-8 animate-fade-in-up border border-gray-700/50">
+        <div class="flex items-center justify-between mb-8">
+            <h2 class="text-2xl font-bold text-white">Translation Jobs</h2>
+            <span class="text-sm text-gray-400" id="jobCount">0 jobs</span>
+        </div>
+        
+        <!-- Jobs Grid -->
+        <div id="jobsGrid" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <!-- Jobs will be loaded here -->
+        </div>
+        
+        <!-- Empty State -->
+        <div id="noJobs" class="text-center text-gray-400 py-16 hidden">
+            <div class="mx-auto h-20 w-20 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl flex items-center justify-center mb-6 shadow-inner">
+                <svg class="h-10 w-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            </div>
+            <p class="text-lg font-semibold mb-2">No translation jobs found</p>
+            <p class="text-sm text-gray-500">Start your first translation to see jobs here</p>
+        </div>
+        
+        <!-- Loading State -->
+        <div id="jobsLoading" class="text-center text-gray-400 py-16 hidden">
+            <div class="mx-auto h-20 w-20 rounded-2xl border-4 border-gray-700 border-t-green-400 animate-spin mb-6"></div>
+            <p class="text-lg font-medium">Loading jobs...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Job management functionality
+let allJobs = [];
+let filteredJobs = [];
+let autoRefreshInterval = null;
+let autoRefreshEnabled = true;
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    initializeJobsPage();
+    loadJobs();
+    startAutoRefresh();
+});
+
+function initializeJobsPage() {
+    // Event listeners
+    document.getElementById('refreshAllBtn').addEventListener('click', loadJobs);
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    document.getElementById('languageFilter').addEventListener('change', applyFilters);
+    document.getElementById('searchFilter').addEventListener('input', applyFilters);
+    document.getElementById('toggleAutoRefresh').addEventListener('click', toggleAutoRefresh);
+}
+
+async function loadJobs() {
+    showJobsLoading(true);
+    
+    try {
+        const response = await fetch('/api/v1/jobs?limit=100');
+        if (!response.ok) throw new Error('Failed to load jobs');
+        
+        allJobs = await response.json();
+        updateJobStats();
+        applyFilters();
+        
+    } catch (error) {
+        console.error('Error loading jobs:', error);
+        showError('Failed to load jobs');
+    } finally {
+        showJobsLoading(false);
+    }
+}
+
+function applyFilters() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const languageFilter = document.getElementById('languageFilter').value;
+    const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+    
+    filteredJobs = allJobs.filter(job => {
+        if (statusFilter && job.status !== statusFilter) return false;
+        if (languageFilter && job.target_language !== languageFilter) return false;
+        if (searchFilter && !job.filename.toLowerCase().includes(searchFilter)) return false;
+        return true;
+    });
+    
+    renderJobsGrid();
+    updateJobCount();
+}
+
+function renderJobsGrid() {
+    const grid = document.getElementById('jobsGrid');
+    const noJobs = document.getElementById('noJobs');
+    
+    if (filteredJobs.length === 0) {
+        grid.innerHTML = '';
+        noJobs.classList.remove('hidden');
+        return;
+    }
+    
+    noJobs.classList.add('hidden');
+    
+    grid.innerHTML = filteredJobs.map(job => `
+        <div class="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl p-6 border border-gray-700/50 hover:border-green-400/30 transition-all duration-300 cursor-pointer" 
+             onclick="showJobDetail('${job.job_id}')">
+            <!-- Header -->
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="h-12 w-12 bg-gradient-button rounded-xl flex items-center justify-center">
+                        <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-white text-lg">${job.filename}</h3>
+                        <p class="text-sm text-gray-400">${formatTimeAgo(job.created_at)}</p>
+                    </div>
+                </div>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium status-${job.status}">
+                    ${job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                </span>
+            </div>
+            
+            <!-- Languages -->
+            <div class="flex items-center justify-center mb-4 space-x-3">
+                <span class="px-3 py-1 bg-gray-700/50 rounded-lg text-sm text-gray-300">${job.source_language}</span>
+                <svg class="h-4 w-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+                <span class="px-3 py-1 bg-green-400/20 rounded-lg text-sm text-green-400 font-medium">${job.target_language}</span>
+            </div>
+            
+            <!-- Progress -->
+            <div class="mb-4">
+                <div class="flex justify-between text-sm mb-2">
+                    <span class="text-gray-300">Progress</span>
+                    <span class="text-white font-medium">${Math.round(job.progress_percentage || 0)}%</span>
+                </div>
+                <div class="w-full bg-gray-700/50 rounded-full h-3">
+                    <div class="progress-bar h-3 rounded-full transition-all duration-500" style="width: ${Math.round(job.progress_percentage || 0)}%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>${job.processed_entries || 0} translated</span>
+                    <span>${job.total_entries || 0} total</span>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="flex space-x-2">
+                ${job.status === 'completed' ? `
+                    <button onclick="event.stopPropagation(); downloadJob('${job.job_id}')" 
+                            class="flex-1 btn-primary py-2 px-4 rounded-xl text-sm font-medium">
+                        <svg class="h-4 w-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-4-4m4 4l4-4m6-10H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V8a2 2 0 00-2-2z" />
+                        </svg>
+                        Download
+                    </button>
+                ` : job.status === 'failed' ? `
+                    <button onclick="event.stopPropagation(); retryJob('${job.job_id}')" 
+                            class="flex-1 btn-secondary py-2 px-4 rounded-xl text-sm font-medium">
+                        <svg class="h-4 w-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Retry
+                    </button>
+                ` : `
+                    <button class="flex-1 bg-gray-700/50 text-gray-400 py-2 px-4 rounded-xl text-sm font-medium cursor-not-allowed">
+                        ${job.status === 'processing' ? 'Processing...' : 'Pending...'}
+                    </button>
+                `}
+                <button onclick="event.stopPropagation(); showJobDetail('${job.job_id}')" 
+                        class="btn-secondary p-2 rounded-xl">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateJobStats() {
+    const stats = {
+        total: allJobs.length,
+        processing: allJobs.filter(j => j.status === 'processing' || j.status === 'pending').length,
+        completed: allJobs.filter(j => j.status === 'completed').length,
+        failed: allJobs.filter(j => j.status === 'failed').length
+    };
+    
+    document.getElementById('totalJobs').textContent = stats.total;
+    document.getElementById('processingJobs').textContent = stats.processing;
+    document.getElementById('completedJobs').textContent = stats.completed;
+    document.getElementById('failedJobs').textContent = stats.failed;
+}
+
+function updateJobCount() {
+    const count = filteredJobs.length;
+    document.getElementById('jobCount').textContent = `${count} job${count !== 1 ? 's' : ''}`;
+}
+
+function showJobsLoading(show) {
+    document.getElementById('jobsLoading').classList.toggle('hidden', !show);
+    document.getElementById('jobsGrid').classList.toggle('hidden', show);
+}
+
+function toggleAutoRefresh() {
+    autoRefreshEnabled = !autoRefreshEnabled;
+    const button = document.getElementById('toggleAutoRefresh');
+    
+    if (autoRefreshEnabled) {
+        startAutoRefresh();
+        button.classList.remove('bg-gray-700/50', 'text-gray-400');
+        button.classList.add('bg-green-400/20', 'text-green-400');
+    } else {
+        stopAutoRefresh();
+        button.classList.remove('bg-green-400/20', 'text-green-400');
+        button.classList.add('bg-gray-700/50', 'text-gray-400');
+    }
+}
+
+function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(loadJobs, 10000); // Refresh every 10 seconds
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
+// Job actions
+async function downloadJob(jobId) {
+    try {
+        const response = await fetch(`/api/v1/download/${jobId}`);
+        if (!response.ok) throw new Error('Download failed');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `translated_${jobId}.po`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+    } catch (error) {
+        console.error('Download error:', error);
+        showError('Failed to download file');
+    }
+}
+
+async function retryJob(jobId) {
+    try {
+        const response = await fetch(`/api/v1/translation/${jobId}/retry`, { method: 'POST' });
+        if (!response.ok) throw new Error('Retry failed');
+        
+        showSuccess('Job retry initiated');
+        loadJobs();
+        
+    } catch (error) {
+        console.error('Retry error:', error);
+        showError('Failed to retry job');
+    }
+}
+
+function showJobDetail(jobId) {
+    // Navigate to detailed job view or show modal
+    window.location.href = `/jobs/${jobId}`;
+}
+
+// Utility functions
+function formatTimeAgo(dateString) {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays}d ago`;
+}
+
+function showError(message) {
+    console.error(message);
+    // Implement toast notification
+}
+
+function showSuccess(message) {
+    console.log(message);
+    // Implement toast notification
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,326 @@
+"""
+PO File Parser for handling Portable Object files.
+Uses polib library for parsing and validation.
+"""
+
+import os
+import tempfile
+from pathlib import Path
+from typing import List, Optional, Dict, Any, Tuple
+from datetime import datetime
+
+import polib
+from loguru import logger
+
+from ..models.po_models import POEntry, POFile, POFileMetadata
+from ..config import settings
+
+
+class POFileParser:
+    """Parser for PO (Portable Object) files."""
+    
+    def __init__(self):
+        """Initialize the PO file parser."""
+        self.logger = logger.bind(component="POFileParser")
+    
+    async def parse_file(self, file_path: str) -> POFile:
+        """
+        Parse a PO file and return structured data.
+        
+        Args:
+            file_path: Path to the PO file
+            
+        Returns:
+            POFile: Parsed PO file data
+            
+        Raises:
+            ValueError: If file is invalid or cannot be parsed
+            FileNotFoundError: If file doesn't exist
+        """
+        try:
+            file_path_obj = Path(file_path)
+            
+            if not file_path_obj.exists():
+                raise FileNotFoundError(f"PO file not found: {file_path}")
+            
+            # Get file size
+            file_size = file_path_obj.stat().st_size
+            filename = file_path_obj.name
+            
+            self.logger.info(f"Parsing PO file: {filename} ({file_size} bytes)")
+            
+            # Parse with polib
+            try:
+                po_data = polib.pofile(file_path, encoding='utf-8')
+            except UnicodeDecodeError:
+                # Try with different encodings
+                for encoding in ['latin-1', 'cp1252', 'iso-8859-1']:
+                    try:
+                        po_data = polib.pofile(file_path, encoding=encoding)
+                        self.logger.warning(f"Successfully parsed with {encoding} encoding")
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                else:
+                    raise ValueError("Unable to decode PO file with any supported encoding")
+            
+            # Extract metadata
+            metadata = self._extract_metadata(po_data)
+            
+            # Extract entries
+            entries = self._extract_entries(po_data)
+            
+            # Create POFile object
+            po_file = POFile(
+                filename=filename,
+                file_size=file_size,
+                metadata=metadata,
+                entries=entries
+            )
+            
+            self.logger.info(
+                f"Successfully parsed PO file: {po_file.total_entries} entries, "
+                f"{po_file.translated_entries} translated, "
+                f"{po_file.untranslated_entries} untranslated"
+            )
+            
+            return po_file
+            
+        except Exception as e:
+            self.logger.error(f"Error parsing PO file {file_path}: {str(e)}")
+            raise ValueError(f"Failed to parse PO file: {str(e)}")
+    
+    def _extract_metadata(self, po_data: polib.POFile) -> POFileMetadata:
+        """Extract metadata from polib POFile object."""
+        
+        metadata = POFileMetadata()
+        
+        # Extract header information
+        if hasattr(po_data, 'metadata') and po_data.metadata:
+            for key, value in po_data.metadata.items():
+                if key == "Project-Id-Version":
+                    metadata.project_id_version = value
+                elif key == "POT-Creation-Date":
+                    metadata.pot_creation_date = self._parse_po_datetime(value)
+                elif key == "PO-Revision-Date":
+                    metadata.po_revision_date = self._parse_po_datetime(value)
+                elif key == "Last-Translator":
+                    metadata.last_translator = value
+                elif key == "Language-Team":
+                    metadata.language_team = value
+                elif key == "Language":
+                    metadata.language = value
+                elif key == "MIME-Version":
+                    metadata.mime_version = value
+                elif key == "Content-Type":
+                    metadata.content_type = value
+                    # Extract charset from Content-Type
+                    if "charset=" in value:
+                        charset = value.split("charset=")[1].strip()
+                        metadata.charset = charset
+                elif key == "Content-Transfer-Encoding":
+                    metadata.content_transfer_encoding = value
+                elif key == "Plural-Forms":
+                    metadata.plural_forms = value
+        
+        return metadata
+    
+    def _extract_entries(self, po_data: polib.POFile) -> List[POEntry]:
+        """Extract entries from polib POFile object."""
+        
+        entries = []
+        
+        for entry in po_data:
+            # Skip header entry (empty msgid)
+            if not entry.msgid:
+                continue
+            
+            # Create POEntry
+            po_entry = POEntry(
+                msgid=entry.msgid,
+                msgstr=entry.msgstr,
+                msgctxt=entry.msgctxt if entry.msgctxt else None,
+                msgid_plural=entry.msgid_plural if entry.msgid_plural else None,
+                msgstr_plural=dict(entry.msgstr_plural) if entry.msgstr_plural else {},
+                occurrences=[f"{occ[0]}:{occ[1]}" for occ in entry.occurrences],
+                flags=list(entry.flags),
+                comments=entry.tcomment.split('\n') if entry.tcomment else [],
+                auto_comments=entry.comment.split('\n') if entry.comment else [],
+                is_obsolete=entry.obsolete
+            )
+            
+            entries.append(po_entry)
+        
+        return entries
+    
+    def _parse_po_datetime(self, date_str: str) -> Optional[datetime]:
+        """Parse datetime from PO file format."""
+        if not date_str:
+            return None
+        
+        # Common PO date formats
+        formats = [
+            "%Y-%m-%d %H:%M%z",
+            "%Y-%m-%d %H:%M:%S%z", 
+            "%Y-%m-%d %H:%M+%Z",
+            "%Y-%m-%d %H:%M",
+            "%Y-%m-%d"
+        ]
+        
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        
+        self.logger.warning(f"Could not parse datetime: {date_str}")
+        return None
+    
+    async def validate_file(self, file_path: str) -> Tuple[bool, List[str]]:
+        """
+        Validate a PO file structure and content.
+        
+        Args:
+            file_path: Path to the PO file
+            
+        Returns:
+            Tuple of (is_valid, error_messages)
+        """
+        errors = []
+        
+        try:
+            file_path_obj = Path(file_path)
+            
+            # Check file exists
+            if not file_path_obj.exists():
+                errors.append("File does not exist")
+                return False, errors
+            
+            # Check file size
+            file_size = file_path_obj.stat().st_size
+            if file_size == 0:
+                errors.append("File is empty")
+                return False, errors
+            
+            if file_size > settings.file_config.max_file_size:
+                errors.append(f"File too large ({file_size} bytes). Maximum size is {settings.file_config.max_file_size} bytes")
+                return False, errors
+            
+            # Check file extension
+            if file_path_obj.suffix not in settings.file_config.allowed_extensions:
+                errors.append(f"Invalid file extension. Allowed: {settings.file_config.allowed_extensions}")
+                return False, errors
+            
+            # Try to parse with polib
+            try:
+                po_data = polib.pofile(file_path)
+                
+                # Check if file has any entries
+                if len(po_data) == 0:
+                    errors.append("PO file contains no entries")
+                
+                # Check for critical parsing issues
+                if po_data.percent_translated() < 0:
+                    errors.append("Invalid PO file structure")
+                
+            except Exception as e:
+                errors.append(f"Invalid PO file format: {str(e)}")
+                return False, errors
+            
+        except Exception as e:
+            errors.append(f"File validation error: {str(e)}")
+            return False, errors
+        
+        is_valid = len(errors) == 0
+        return is_valid, errors
+    
+    async def write_po_file(self, po_file: POFile, output_path: str) -> bool:
+        """
+        Write POFile data back to a PO file.
+        
+        Args:
+            po_file: POFile object to write
+            output_path: Path for output file
+            
+        Returns:
+            bool: Success status
+        """
+        try:
+            self.logger.info(f"Writing PO file: {output_path}")
+            
+            # Create new polib POFile
+            po_data = polib.POFile()
+            
+            # Set metadata
+            metadata = po_file.metadata
+            po_data.metadata = {
+                'Project-Id-Version': metadata.project_id_version or 'PACKAGE VERSION',
+                'POT-Creation-Date': metadata.pot_creation_date.strftime('%Y-%m-%d %H:%M%z') if metadata.pot_creation_date else '',
+                'PO-Revision-Date': datetime.utcnow().strftime('%Y-%m-%d %H:%M%z'),
+                'Last-Translator': metadata.last_translator or 'Translation Tool <noreply@example.com>',
+                'Language-Team': metadata.language_team or f'{metadata.language or "LANGUAGE"} <noreply@example.com>',
+                'Language': metadata.language or '',
+                'MIME-Version': metadata.mime_version or '1.0',
+                'Content-Type': metadata.content_type,
+                'Content-Transfer-Encoding': metadata.content_transfer_encoding,
+                'Plural-Forms': metadata.plural_forms or ''
+            }
+            
+            # Add entries
+            for entry in po_file.entries:
+                po_entry = polib.POEntry(
+                    msgid=entry.msgid,
+                    msgstr=entry.msgstr,
+                    msgctxt=entry.msgctxt,
+                    msgid_plural=entry.msgid_plural,
+                    msgstr_plural=entry.msgstr_plural,
+                    occurrences=[(occ.split(':')[0], int(occ.split(':')[1])) if ':' in occ else (occ, 0) for occ in entry.occurrences],
+                    flags=entry.flags,
+                    tcomment='\n'.join(entry.comments) if entry.comments else '',
+                    comment='\n'.join(entry.auto_comments) if entry.auto_comments else '',
+                    obsolete=entry.is_obsolete
+                )
+                po_data.append(po_entry)
+            
+            # Write to file
+            po_data.save(output_path)
+            
+            self.logger.info(f"Successfully wrote PO file: {output_path}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error writing PO file {output_path}: {str(e)}")
+            return False
+    
+    def get_file_statistics(self, po_file: POFile) -> Dict[str, Any]:
+        """Get comprehensive statistics for a PO file."""
+        
+        stats = po_file.get_statistics()
+        
+        # Add additional statistics
+        entries_by_status = {
+            'translated': len(po_file.get_entries_by_status('translated')),
+            'untranslated': len(po_file.get_entries_by_status('untranslated')),
+            'fuzzy': len(po_file.get_entries_by_status('fuzzy'))
+        }
+        
+        # Analyze entry lengths
+        entry_lengths = [len(entry.msgid) for entry in po_file.entries]
+        if entry_lengths:
+            stats.update({
+                'average_entry_length': sum(entry_lengths) / len(entry_lengths),
+                'max_entry_length': max(entry_lengths),
+                'min_entry_length': min(entry_lengths)
+            })
+        
+        # Count entries with context
+        entries_with_context = len([e for e in po_file.entries if e.msgctxt])
+        stats['entries_with_context'] = entries_with_context
+        
+        # Count plural entries
+        plural_entries = len([e for e in po_file.entries if e.msgid_plural])
+        stats['plural_entries'] = plural_entries
+        
+        stats['entries_by_status'] = entries_by_status
+        
+        return stats 
