@@ -159,17 +159,12 @@ docker-compose down
 
 ## 🔑 Getting Your DeepSeek API Key
 
-### Free API Access
+### API Access
 1. **Visit**: [DeepSeek Platform](https://platform.deepseek.com/)
 2. **Register**: Create your free account
 3. **Navigate**: Go to API Keys section in dashboard
 4. **Generate**: Create a new API key
 5. **Configure**: Add the key to your `.env` file
-
-### API Pricing (Very Affordable)
-- **Free Tier**: Generous limits for testing
-- **Pay-per-use**: Only pay for what you translate
-- **Enterprise**: Volume discounts available
 
 ---
 
