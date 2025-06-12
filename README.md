@@ -175,10 +175,6 @@ docker-compose down
 
 ## 🏆 Why Choose PolyglotPO?
 
-### ✅ **vs. Google Translate API**
-- ✅ **Better Context Understanding** - Specialized for software strings
-- ✅ **Lower Cost** - DeepSeek pricing is more competitive
-- ✅ **Privacy Focused** - Your data stays on your server
 
 ### ✅ **vs. Manual Translation**
 - ✅ **1000x Faster** - Translate hundreds of strings in minutes
@@ -189,16 +185,6 @@ docker-compose down
 - ✅ **AI-Powered** - Most PO tools lack AI integration
 - ✅ **Batch Processing** - Handle multiple files simultaneously
 - ✅ **Modern Interface** - Clean, intuitive web-based UI
-
----
-
-## 📊 Performance & Statistics
-
-- **Translation Speed**: 100+ strings per minute
-- **Accuracy Rate**: 95%+ successful translations
-- **Supported File Size**: Up to 10MB PO files
-- **Concurrent Processing**: Multiple files simultaneously
-- **Uptime**: 99.9% availability with Docker deployment
 
 ---
 
