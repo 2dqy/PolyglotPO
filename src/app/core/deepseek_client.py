@@ -138,15 +138,17 @@ class DeepSeekClient:
         
         target_lang_name = language_names.get(target_language, target_language)
         
-        # Optimized prompt for DeepSeek V3's improved reasoning capabilities
-        prompt = f"""Translate the following text to {target_lang_name} for software interface localization.
+        # Optimized prompt for DeepSeek V3's improved reasoning capabilities  
+        prompt = f"""Translate the following text to {target_lang_name} for professional software interface localization.
 
 CRITICAL REQUIREMENTS:
-- Return ONLY the translation, no explanations or notes
-- Use natural, professional language appropriate for software interfaces
+- Return ONLY the translated text, no quotes, explanations or notes
+- Use formal, professional language appropriate for business software interfaces
+- For Traditional Chinese (Hong Kong): use standard Traditional Chinese, NOT Cantonese colloquialisms
 - Preserve ALL technical markers exactly: %s, %d, @variables, {{placeholders}}, HTML tags, URLs
-- Keep proper nouns and brand names unchanged
+- Keep proper nouns and brand names unchanged  
 - Maintain original formatting and structure
+- Do NOT add extra quotation marks around the translation
 - If text is empty or only whitespace, return it unchanged
 
 Text to translate: "{text}"

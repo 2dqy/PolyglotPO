@@ -141,7 +141,12 @@ class TranslationService:
             # Filter entries that need translation
             translatable_entries = [
                 entry for entry in po_file.entries 
-                if entry.msgid and not entry.msgstr
+                if entry.msgid and (
+                    # For entries with plural forms, check if ANY plural translation is missing
+                    (entry.msgid_plural and not any(val.strip() for val in entry.msgstr_plural.values())) or
+                    # For non-plural entries, check if msgstr is missing
+                    (not entry.msgid_plural and not entry.msgstr.strip())
+                )
             ]
             
             total_entries = len(translatable_entries)
@@ -195,8 +200,22 @@ class TranslationService:
                     # Update entries with translations
                     for j, translated_text in enumerate(translated_texts):
                         if translated_text and translated_text.strip() and translated_text != texts[j]:
+                            # Clean up the translated text (remove extra quotes)
+                            cleaned_text = self._clean_translation_text(translated_text)
+                            
                             # Only count as translated if it's different from original
-                            batch[j].msgstr = translated_text
+                            entry = batch[j]
+                            
+                            if entry.msgid_plural:
+                                # For plural entries, set plural translations
+                                entry.msgstr_plural = {0: cleaned_text}
+                                # Could also translate the plural form separately
+                                # but for now, use the same translation for all plural forms
+                                entry.msgstr = ""  # Clear single msgstr for plural entries
+                            else:
+                                # For single entries, set regular msgstr
+                                entry.msgstr = cleaned_text
+                            
                             translated_count += 1
                         elif translated_text == texts[j]:
                             # This means translation failed and original was returned
@@ -340,6 +359,27 @@ class TranslationService:
         else:
             return 0.5  # 0.5 seconds for smaller files
     
+    def _clean_translation_text(self, text: str) -> str:
+        """Clean up translated text by removing unnecessary quotes and formatting."""
+        if not text:
+            return text
+            
+        cleaned = text.strip()
+        
+        # Remove extra quotes that might be added by the AI
+        # Only remove if the entire string is wrapped in quotes
+        if (cleaned.startswith('"') and cleaned.endswith('"') and 
+            cleaned.count('"') == 2):
+            cleaned = cleaned[1:-1]
+        elif (cleaned.startswith("'") and cleaned.endswith("'") and 
+              cleaned.count("'") == 2):
+            cleaned = cleaned[1:-1]
+        
+        # Handle escaped quotes within the text
+        cleaned = cleaned.replace('\\"', '"').replace("\\'", "'")
+        
+        return cleaned
+    
 
     
     async def _parse_po_file(self, file_path: str) -> POFile:
@@ -387,6 +427,8 @@ class TranslationService:
                     msgid=entry.msgid,
                     msgstr=entry.msgstr,
                     msgctxt=entry.msgctxt,
+                    msgid_plural=entry.msgid_plural if entry.msgid_plural else None,
+                    msgstr_plural=entry.msgstr_plural if entry.msgstr_plural else {},
                     comment="\n".join(entry.comments) if entry.comments else "",
                     tcomment="\n".join(entry.auto_comments) if entry.auto_comments else "",
                     occurrences=[(ref.split(':')[0], ref.split(':')[1] if ':' in ref else "") for ref in entry.occurrences],
