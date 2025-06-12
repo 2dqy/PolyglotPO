@@ -26,7 +26,12 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application code
 COPY src/ ./src/
-COPY .env .env
+
+# Copy .env file if it exists (optional for cloud deployments)
+COPY .env* ./
+RUN if [ ! -f ".env" ]; then \
+    echo "No .env file found, using environment variables from cloud provider"; \
+    fi
 
 # Create storage directories
 RUN mkdir -p /app/src/app/storage/uploads \

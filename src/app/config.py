@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     database_url: str = Field(default="sqlite:///./translation_tool.db", description="Database URL")
     
     class Config:
-        env_file = "../.env"  # Look in project root (one level up from src)
+        env_file = "../.env" if Path("../.env").exists() else None  # Optional .env file
         env_file_encoding = "utf-8"
         case_sensitive = False
         extra = "allow"  # Allow extra fields from env vars

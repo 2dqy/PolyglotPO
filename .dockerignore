@@ -1,13 +1,77 @@
-# Git
+# Git files
 .git
 .gitignore
+.gitattributes
 
-# Python
-__pycache__
+# Documentation
+README.md
+*.md
+
+# Environment files (use cloud provider env vars instead)
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python cache
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+*.log
+logs/
+
+# Storage directories (will be created at runtime)
+data/storage/
+src/app/storage/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
 env
 pip-log.txt
 pip-delete-this-directory.txt
@@ -21,13 +85,7 @@ coverage.xml
 *.log
 .git
 .mypy_cache
-.pytest_cache
 .hypothesis
-
-# Virtual environments
-venv/
-env/
-ENV/
 
 # IDE
 .vscode/
