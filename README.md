@@ -119,4 +119,14 @@ docker-compose down
 
 ---
 
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
 **That's all you need! The entire setup should take less than 5 minutes.** 🎉 
