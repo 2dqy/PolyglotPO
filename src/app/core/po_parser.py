@@ -49,6 +49,10 @@ class POFileParser:
             
             self.logger.info(f"Parsing PO file: {filename} ({file_size} bytes)")
             
+            # Read raw file content for format preservation
+            with open(file_path, 'r', encoding='utf-8') as f:
+                self.raw_content = f.read()
+            
             # Parse with polib
             try:
                 po_data = polib.pofile(file_path, encoding='utf-8')
@@ -67,7 +71,7 @@ class POFileParser:
             # Extract metadata
             metadata = self._extract_metadata(po_data)
             
-            # Extract entries
+            # Extract entries with format preservation
             entries = self._extract_entries(po_data)
             
             # Create POFile object
@@ -142,6 +146,10 @@ class POFileParser:
                 msgctxt=entry.msgctxt if entry.msgctxt else None,
                 msgid_plural=entry.msgid_plural if entry.msgid_plural else None,
                 msgstr_plural=dict(entry.msgstr_plural) if entry.msgstr_plural else {},
+                # Store original format for preservation
+                original_msgid_format=self._get_original_string_format(entry.msgid),
+                original_msgstr_format=self._get_original_string_format(entry.msgstr) if entry.msgstr else None,
+                original_msgctxt_format=self._get_original_string_format(entry.msgctxt) if entry.msgctxt else None,
                 occurrences=[f"{occ[0]}:{occ[1]}" for occ in entry.occurrences],
                 flags=list(entry.flags),
                 comments=entry.tcomment.split('\n') if entry.tcomment else [],
@@ -152,6 +160,83 @@ class POFileParser:
             entries.append(po_entry)
         
         return entries
+    
+    def _get_original_string_format(self, text: str) -> str:
+        """
+        Preserve the original string format for PO file strings.
+        This method tries to extract the exact original format from the raw file content.
+        """
+        if not text or not hasattr(self, 'raw_content'):
+            return self._format_po_string(text)
+        
+        # Try to find the exact original format in the raw content
+        # This is a simple approach - for complex cases, you might need more sophisticated parsing
+        
+        # Escape special regex characters in the text
+        import re
+        escaped_text = re.escape(text)
+        
+        # Look for msgid pattern with this exact text
+        patterns = [
+            rf'msgid\s+("(?:[^"\\]|\\.)*"(?:\s*"(?:[^"\\]|\\.)*")*)',  # Single or multiline format
+            rf'msgid\s+""[\s\n]*("(?:[^"\\]|\\.)*"(?:\s*"(?:[^"\\]|\\.)*")*)',  # Multiline starting with empty string
+        ]
+        
+        for pattern in patterns:
+            matches = re.finditer(pattern, self.raw_content, re.MULTILINE | re.DOTALL)
+            for match in matches:
+                original_format = match.group(1)
+                # Verify this is the right match by checking if it decodes to our text
+                try:
+                    if self._decode_po_string(original_format) == text:
+                        return original_format
+                except:
+                    continue
+        
+        # Fallback to formatted version
+        return self._format_po_string(text)
+
+    def _decode_po_string(self, po_string: str) -> str:
+        """Decode a PO format string back to plain text."""
+        # Remove outer quotes and concatenate multiple quoted strings
+        import re
+        
+        # Find all quoted strings
+        quoted_strings = re.findall(r'"((?:[^"\\]|\\.)*)"', po_string)
+        
+        # Join them and decode escape sequences
+        combined = ''.join(quoted_strings)
+        
+        # Decode common escape sequences
+        decoded = combined.replace('\\n', '\n').replace('\\t', '\t').replace('\\"', '"').replace('\\\\', '\\')
+        
+        return decoded
+
+    def _format_po_string(self, text: str) -> str:
+        """
+        Format a string for PO file output (fallback method).
+        """
+        if not text:
+            return '""'
+        
+        # Check if text contains newlines or is very long
+        if '\n' in text or len(text) > 60:
+            # Use multiline format
+            lines = text.split('\n')
+            if len(lines) > 1:
+                # Multi-line string format
+                formatted_lines = ['""']
+                for line in lines[:-1]:  # All lines except last
+                    escaped_line = line.replace('\\', '\\\\').replace('"', '\\"')
+                    formatted_lines.append(f'"{escaped_line}\\n"')
+                if lines[-1]:  # Last line if not empty
+                    escaped_line = lines[-1].replace('\\', '\\\\').replace('"', '\\"')
+                    formatted_lines.append(f'"{escaped_line}"')
+                return '\n'.join(formatted_lines)
+        
+        # Single line format - escape quotes and backslashes
+        escaped_text = text.replace('\\', '\\\\').replace('"', '\\"')
+        return f'"{escaped_text}"'
     
     def _parse_po_datetime(self, date_str: str) -> Optional[datetime]:
         """Parse datetime from PO file format."""
@@ -236,7 +321,7 @@ class POFileParser:
     
     async def write_po_file(self, po_file: POFile, output_path: str) -> bool:
         """
-        Write POFile data back to a PO file.
+        Write POFile data back to a PO file with format preservation.
         
         Args:
             po_file: POFile object to write
@@ -246,44 +331,15 @@ class POFileParser:
             bool: Success status
         """
         try:
-            self.logger.info(f"Writing PO file: {output_path}")
+            self.logger.info(f"Writing PO file with format preservation: {output_path}")
             
-            # Create new polib POFile
-            po_data = polib.POFile()
-            
-            # Set metadata
-            metadata = po_file.metadata
-            po_data.metadata = {
-                'Project-Id-Version': metadata.project_id_version or 'PACKAGE VERSION',
-                'POT-Creation-Date': metadata.pot_creation_date.strftime('%Y-%m-%d %H:%M%z') if metadata.pot_creation_date else '',
-                'PO-Revision-Date': datetime.utcnow().strftime('%Y-%m-%d %H:%M%z'),
-                'Last-Translator': metadata.last_translator or 'Translation Tool <noreply@example.com>',
-                'Language-Team': metadata.language_team or f'{metadata.language or "LANGUAGE"} <noreply@example.com>',
-                'Language': metadata.language or '',
-                'MIME-Version': metadata.mime_version or '1.0',
-                'Content-Type': metadata.content_type,
-                'Content-Transfer-Encoding': metadata.content_transfer_encoding,
-                'Plural-Forms': metadata.plural_forms or ''
-            }
-            
-            # Add entries
-            for entry in po_file.entries:
-                po_entry = polib.POEntry(
-                    msgid=entry.msgid,
-                    msgstr=entry.msgstr,
-                    msgctxt=entry.msgctxt,
-                    msgid_plural=entry.msgid_plural,
-                    msgstr_plural=entry.msgstr_plural,
-                    occurrences=[(occ.split(':')[0], int(occ.split(':')[1])) if ':' in occ else (occ, 0) for occ in entry.occurrences],
-                    flags=entry.flags,
-                    tcomment='\n'.join(entry.comments) if entry.comments else '',
-                    comment='\n'.join(entry.auto_comments) if entry.auto_comments else '',
-                    obsolete=entry.is_obsolete
-                )
-                po_data.append(po_entry)
-            
-            # Write to file
-            po_data.save(output_path)
+            with open(output_path, 'w', encoding='utf-8') as f:
+                # Write header
+                self._write_po_header(f, po_file.metadata)
+                
+                # Write entries
+                for entry in po_file.entries:
+                    self._write_po_entry(f, entry)
             
             self.logger.info(f"Successfully wrote PO file: {output_path}")
             return True
@@ -291,6 +347,102 @@ class POFileParser:
         except Exception as e:
             self.logger.error(f"Error writing PO file {output_path}: {str(e)}")
             return False
+
+    def _write_po_header(self, file_handle, metadata: POFileMetadata) -> None:
+        """Write PO file header with metadata."""
+        file_handle.write('# SOME DESCRIPTIVE TITLE.\n')
+        file_handle.write('# Copyright (C) YEAR THE PACKAGE\'S COPYRIGHT HOLDER\n')
+        file_handle.write('# This file is distributed under the same license as the PACKAGE package.\n')
+        file_handle.write('# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.\n')
+        file_handle.write('#\n')
+        file_handle.write('msgid ""\n')
+        file_handle.write('msgstr ""\n')
+        
+        # Write metadata
+        if metadata.project_id_version:
+            file_handle.write(f'"Project-Id-Version: {metadata.project_id_version}\\n"\n')
+        if metadata.pot_creation_date:
+            file_handle.write(f'"POT-Creation-Date: {metadata.pot_creation_date.strftime("%Y-%m-%d %H:%M%z")}\\n"\n')
+        
+        # Always update PO-Revision-Date to current time
+        file_handle.write(f'"PO-Revision-Date: {datetime.utcnow().strftime("%Y-%m-%d %H:%M%z")}\\n"\n')
+        
+        if metadata.last_translator:
+            file_handle.write(f'"Last-Translator: {metadata.last_translator}\\n"\n')
+        if metadata.language_team:
+            file_handle.write(f'"Language-Team: {metadata.language_team}\\n"\n')
+        if metadata.language:
+            file_handle.write(f'"Language: {metadata.language}\\n"\n')
+        
+        file_handle.write(f'"MIME-Version: {metadata.mime_version or "1.0"}\\n"\n')
+        file_handle.write(f'"Content-Type: {metadata.content_type}\\n"\n')
+        file_handle.write(f'"Content-Transfer-Encoding: {metadata.content_transfer_encoding}\\n"\n')
+        
+        if metadata.plural_forms:
+            file_handle.write(f'"Plural-Forms: {metadata.plural_forms}\\n"\n')
+        
+        file_handle.write('\n')
+
+    def _write_po_entry(self, file_handle, entry: POEntry) -> None:
+        """Write a single PO entry with format preservation."""
+        # Write translator comments
+        if entry.comments:
+            for comment in entry.comments:
+                if comment.strip():
+                    file_handle.write(f'# {comment}\n')
+        
+        # Write automatic comments  
+        if entry.auto_comments:
+            for comment in entry.auto_comments:
+                if comment.strip():
+                    file_handle.write(f'#. {comment}\n')
+        
+        # Write source references
+        if entry.occurrences:
+            file_handle.write(f'#: {" ".join(entry.occurrences)}\n')
+        
+        # Write flags
+        if entry.flags:
+            file_handle.write(f'#, {", ".join(entry.flags)}\n')
+        
+        # Write msgctxt if present
+        if entry.msgctxt:
+            if entry.original_msgctxt_format:
+                file_handle.write(f'msgctxt {entry.original_msgctxt_format}\n')
+            else:
+                file_handle.write(f'msgctxt "{entry.msgctxt}"\n')
+        
+        # Write msgid with original format preservation
+        if entry.original_msgid_format:
+            file_handle.write(f'msgid {entry.original_msgid_format}\n')
+        else:
+            # Fallback to escaped format
+            escaped_msgid = entry.msgid.replace('\\', '\\\\').replace('"', '\\"')
+            file_handle.write(f'msgid "{escaped_msgid}"\n')
+        
+        # Write msgid_plural if present
+        if entry.msgid_plural:
+            escaped_plural = entry.msgid_plural.replace('\\', '\\\\').replace('"', '\\"')
+            file_handle.write(f'msgid_plural "{escaped_plural}"\n')
+        
+        # Write msgstr or msgstr_plural
+        if entry.msgstr_plural:
+            # Write plural forms
+            for idx, plural_str in entry.msgstr_plural.items():
+                escaped_str = plural_str.replace('\\', '\\\\').replace('"', '\\"')
+                file_handle.write(f'msgstr[{idx}] "{escaped_str}"\n')
+        else:
+            # Write single msgstr
+            if entry.msgstr:
+                if entry.original_msgstr_format:
+                    file_handle.write(f'msgstr {entry.original_msgstr_format}\n')
+                else:
+                    escaped_str = entry.msgstr.replace('\\', '\\\\').replace('"', '\\"')
+                    file_handle.write(f'msgstr "{escaped_str}"\n')
+            else:
+                file_handle.write('msgstr ""\n')
+        
+        file_handle.write('\n')
     
     def get_file_statistics(self, po_file: POFile) -> Dict[str, Any]:
         """Get comprehensive statistics for a PO file."""

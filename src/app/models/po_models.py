@@ -17,6 +17,11 @@ class POEntry(BaseModel):
     msgid_plural: Optional[str] = Field(None, description="Plural form of msgid")
     msgstr_plural: Dict[int, str] = Field(default_factory=dict, description="Plural translations")
     
+    # Format preservation fields (new)
+    original_msgid_format: Optional[str] = Field(None, description="Original msgid with exact formatting")
+    original_msgstr_format: Optional[str] = Field(None, description="Original msgstr with exact formatting")
+    original_msgctxt_format: Optional[str] = Field(None, description="Original msgctxt with exact formatting")
+    
     # Additional metadata
     occurrences: List[str] = Field(default_factory=list, description="Source file occurrences")
     flags: List[str] = Field(default_factory=list, description="Entry flags")
