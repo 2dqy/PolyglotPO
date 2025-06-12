@@ -91,9 +91,9 @@ docker-compose down
 
 ## 🆘 Need Help?
 
-- Check `DOCKER_README.md` for detailed Docker information
-- Check `DEEPSEEK_V3_UPGRADE.md` for technical details about the AI model
-- Check `GIT_SETUP.md` for git workflow information
+- Check the troubleshooting section above
+- Review the file structure and usage instructions
+- Ensure your DeepSeek API key is correctly set in the .env file
 
 ## 🔑 Getting DeepSeek API Key
 
