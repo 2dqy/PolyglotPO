@@ -1,5 +1,5 @@
 """
-Main FastAPI application for the PO File Translation Tool.
+Main FastAPI application for PolyglotPO - AI-Powered PO File Translation Tool.
 Entry point for the web application.
 """
 
@@ -36,7 +36,7 @@ class DateTimeEncoder(json.JSONEncoder):
 async def lifespan(app: FastAPI):
     """Application lifespan management."""
     # Startup
-    logger.info("Starting PO File Translation Tool")
+    logger.info("Starting PolyglotPO - AI-Powered PO File Translation Tool")
     logger.info(f"Version: {settings.app_version}")
     logger.info(f"Debug mode: {settings.debug}")
     
@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown
-    logger.info("Shutting down PO File Translation Tool")
+    logger.info("Shutting down PolyglotPO")
 
 
 # Create FastAPI application

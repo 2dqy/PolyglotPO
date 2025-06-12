@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     """Main application settings."""
     
     # Application settings
-    app_name: str = Field(default="PO File Translation Tool", description="Application name")
+    app_name: str = Field(default="PolyglotPO", description="Application name")
     app_version: str = Field(default="1.0.0", description="Application version")
     debug: bool = Field(default=False, description="Debug mode")
     
