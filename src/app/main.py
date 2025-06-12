@@ -55,9 +55,32 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="Internal tool for translating PO (Portable Object) files using DeepSeek AI",
-    docs_url="/docs" if settings.debug else None,
-    redoc_url="/redoc" if settings.debug else None,
+    description="""
+    Professional translation service for PO (Portable Object) files using DeepSeek AI.
+    Perfect for localizing Drupal, WordPress, and other CMS applications.
+    
+    ## Features
+    - Batch Translation: Process large PO files efficiently
+    - Context-Aware: Preserves msgctxt and plural forms  
+    - Real-time Progress: Live translation status updates
+    - Format Preservation: Maintains original PO file structure
+    - Multi-Language Support: Support for 50+ world languages
+    
+    ## Quick Start
+    1. Upload your PO file via `/api/v1/upload`
+    2. Create translation job using `/api/v1/translate`
+    3. Monitor progress via `/api/v1/jobs/{job_id}`
+    4. Download results from `/api/v1/download/{job_id}`
+    """,
+    docs_url="/docs",  # Always enable Swagger UI
+    redoc_url="/redoc",  # Always enable ReDoc
+    contact={
+        "name": "PolyglotPO Support",
+        "email": "support@polyglotpo.com",
+    },
+    license_info={
+        "name": "Internal Use Only",
+    },
     lifespan=lifespan
 )
 
@@ -160,6 +183,42 @@ async def root(request: Request):
     )
 
 
+# API root endpoint
+@app.get("/api", tags=["API Info"])
+async def api_root():
+    """API root endpoint with overview and links."""
+    return {
+        "name": settings.app_name,
+        "version": settings.app_version,
+        "description": "AI-Powered PO File Translation Tool",
+        "docs_url": "/docs",
+        "redoc_url": "/redoc",
+        "endpoints": {
+            "upload": "/api/v1/upload",
+            "translate": "/api/v1/translate",
+            "jobs": "/api/v1/jobs",
+            "download": "/api/v1/download",
+            "languages": "/api/v1/languages/supported"
+        },
+        "health_check": "/health"
+    }
+
+@app.get("/api/v1", tags=["API Info"])
+async def api_v1_root():
+    """API v1 root endpoint."""
+    return {
+        "version": "v1", 
+        "status": "active",
+        "endpoints": [
+            "GET /api/v1/languages/supported - Get supported languages",
+            "POST /api/v1/upload - Upload PO file",
+            "POST /api/v1/translate - Create translation job", 
+            "GET /api/v1/translate/{job_id} - Get job status",
+            "GET /api/v1/jobs - List all jobs",
+            "GET /api/v1/download/{job_id} - Download translated file"
+        ]
+    }
+
 # Import and register API routes
 from .api import upload
 from .api import translation
@@ -168,11 +227,31 @@ from .api import download
 from .api import languages
 
 # Register API routes
-app.include_router(upload.router, prefix="/api/v1", tags=["upload"])
-app.include_router(translation.router, prefix="/api/v1", tags=["translation"])
-app.include_router(jobs.router, prefix="/api/v1", tags=["jobs"])
-app.include_router(download.router, prefix="/api/v1", tags=["download"])
-app.include_router(languages.router, prefix="/api/v1", tags=["languages"])
+app.include_router(
+    upload.router, 
+    prefix="/api/v1", 
+    tags=["File Upload"]
+)
+app.include_router(
+    translation.router, 
+    prefix="/api/v1", 
+    tags=["Translation Jobs"]
+)
+app.include_router(
+    jobs.router, 
+    prefix="/api/v1", 
+    tags=["Job Management"]
+)
+app.include_router(
+    download.router, 
+    prefix="/api/v1", 
+    tags=["Download Results"]
+)
+app.include_router(
+    languages.router, 
+    prefix="/api/v1", 
+    tags=["Languages"]
+)
 
 # HTML page routes
 @app.get("/jobs", response_class=HTMLResponse)
